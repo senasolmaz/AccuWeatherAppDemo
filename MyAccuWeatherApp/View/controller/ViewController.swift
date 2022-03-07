@@ -4,6 +4,7 @@
 //
 
 import UIKit
+import SwiftyJSON
 
 class ViewController: UIViewController {
 
@@ -30,22 +31,25 @@ class ViewController: UIViewController {
     
     func initViewModel(){
         dataViewModel.reloadTableView = {
-            DispatchQueue.main.async { self.searchTableView.reloadData() }
+            DispatchQueue.main.async {
+                self.searchTableView.reloadData()
+                UserDefaultsClass.shared.saveLastSearchTexts(word: self.textValueS!)
+            }
         }
         dataViewModel.showError = {
             DispatchQueue.main.async {
-//                self.showAlert("Ups, something went wrong.")
-                self.removeLoadingView()
+                self.view.stopLoading()
+                self.showAlert("Location Api Error")
             }
         }
         dataViewModel.showLoading = {
             DispatchQueue.main.async {
-                self.createLoadingView()
+                self.view.showLoading()
             }
         }
         dataViewModel.hideLoading = {
             DispatchQueue.main.async {
-                self.removeLoadingView()
+                self.view.stopLoading()
             }
         }
         dataViewModel.getLocationData(value: textValueS!)
@@ -57,6 +61,13 @@ class ViewController: UIViewController {
         self.scrollHeights.constant = 0
         self.searchTextfield.returnKeyType = .done
         registerTableViewCells()
+        let searchHistory = UserDefaults.standard.object(forKey: "SearchDefault")
+        if searchHistory != nil {
+            for item in (searchHistory as! [String]) {
+                self.lastSearchItemsView.addArrangedSubview(addLastSearchView(value: item, clickEvent: self))
+                self.scrollHeights.constant = 50
+            }
+        }
     }
 
     private func registerTableViewCells() {
@@ -71,8 +82,11 @@ class ViewController: UIViewController {
 extension ViewController: UITableViewDelegate, UITableViewDataSource {
     
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        print(dataViewModel.numberOfCells)
-        return dataViewModel.numberOfCells
+        if dataViewModel.locations.count == 0 {
+            return 0
+        }else {
+            return dataViewModel.locations.count
+        }
     }
     
     func tableView(_ tableView: UITableView,
@@ -81,10 +95,10 @@ extension ViewController: UITableViewDelegate, UITableViewDataSource {
         guard let cell = tableView.dequeueReusableCell(withIdentifier: "searchItemCell", for: indexPath) as? SearchItemCell else {
             fatalError("Cell not exists in storyboard")
         }
-        let cellVM = dataViewModel.getCellViewModel( at: indexPath )
         
-        cell.textItemLabel.text = cellVM.localizedName
-        cell.countryItemLabel.text = cellVM.country
+        let cellVM = dataViewModel.locations[indexPath.row]
+        cell.textItemLabel.text = cellVM.LocalizedName
+        cell.countryItemLabel.text = cellVM.Country.LocalizedName
         cell.selectionStyle = .none
         return cell
     }
@@ -94,10 +108,13 @@ extension ViewController: UITableViewDelegate, UITableViewDataSource {
         let vc = storyboard?.instantiateViewController(identifier:
                                                         "ForestcastViewController") as? ForestcastViewController
         
-        let cellVM = dataViewModel.getCellViewModel( at: indexPath )
+        let cellVM = dataViewModel.locations[indexPath.row]
         
-        vc?.title = cellVM.localizedName
-        vc?.locationCellViewModel = cellVM
+        vc?.title = cellVM.LocalizedName
+        
+        vc?.country = cellVM.Country.LocalizedName
+        vc?.localizedName = cellVM.LocalizedName
+        vc?.key = cellVM.Key
         self.navigationController?.pushViewController(vc!, animated: true)
     }
 }
@@ -107,10 +124,20 @@ extension ViewController: UITextFieldDelegate {
     func textFieldShouldReturn(_ textField: UITextField) -> Bool {
         
         textValueS = textField.text?.lowercased()
+        UserDefaultsClass.shared.saveLastSearchTexts(word: textValueS!)
         self.initViewModel()
         textField.resignFirstResponder()
                 
         return true
+    }
+    
+}
+
+extension ViewController: SearchHistoryButtonClickEvent {
+    func onClickHistoryButton(sender: UIButton!) {
+        textValueS = sender.configuration?.title
+        searchTextfield.text = textValueS
+        initViewModel()
     }
     
 }

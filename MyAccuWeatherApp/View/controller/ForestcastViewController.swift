@@ -15,7 +15,9 @@ class ForestcastViewController: UIViewController {
     @IBOutlet var weatherTableView: UITableView!
     
     var dataViewModel = ForacastViewModel()
-    var locationCellViewModel: LocationListCellViewModel?
+    var key: String!
+    var localizedName: String!
+    var country: String!
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -34,23 +36,23 @@ class ForestcastViewController: UIViewController {
                 self.setHeaderData()
             }
         }
-        
         dataViewModel.showError = {
             DispatchQueue.main.async {
-                self.removeLoadingView()
+                self.view.stopLoading()
+                self.showAlert("Forecast Api Error")
             }
         }
         dataViewModel.showLoading = {
             DispatchQueue.main.async {
-                self.createLoadingView()
+                self.view.showLoading()
             }
         }
         dataViewModel.hideLoading = {
             DispatchQueue.main.async {
-                self.removeLoadingView()
+                self.view.stopLoading()
             }
         }
-        dataViewModel.getForecastData(value: (locationCellViewModel!.key))
+        dataViewModel.getForecastData(value: key)
         
     }
 
@@ -63,11 +65,10 @@ class ForestcastViewController: UIViewController {
     
     func setHeaderData() {
         self.descriptionLabel.text = dataViewModel.forecastModel.Headline.Text
-        self.cityNameLabel.text = locationCellViewModel?.localizedName
-        self.countryNameLabel.text = locationCellViewModel?.country
+        self.cityNameLabel.text = localizedName
+        self.countryNameLabel.text = country
         
     }
-
 }
 
 extension ForestcastViewController: UITableViewDelegate, UITableViewDataSource {
@@ -90,9 +91,6 @@ extension ForestcastViewController: UITableViewDelegate, UITableViewDataSource {
        
         if indexPath.row == 0 {
             cell.forecastDateLabel.text = "Bugün"
-        }
-        else if indexPath.row == 1 {
-            cell.forecastDateLabel.text = "Yarın"
         }else {
             cell.forecastDateLabel.text = cellVM.Date.convertDate()
         }

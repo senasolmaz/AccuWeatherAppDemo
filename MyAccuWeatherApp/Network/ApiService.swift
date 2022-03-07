@@ -29,9 +29,7 @@ class ApiService: ServiceProtocol {
                 case let .failure(error):
                     print(error.localizedDescription)
                 }
-            
             }
-            
         }
     }
     
@@ -45,11 +43,8 @@ class ApiService: ServiceProtocol {
                 case let .failure(error):
                     print(error.localizedDescription)
                 }
-            
             }
-            
         }
     }
-
 }
 
